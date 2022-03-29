@@ -68,13 +68,18 @@ def get_plugin(module_name, sources, headers=None, source_dir=None, **build_kwar
     if module_name in _cached_plugins:
         return _cached_plugins[module_name]
 
+    print(f"verbosity = {verbosity}")
+    
     # Print status.
     if verbosity == 'full':
         print(f'Setting up PyTorch plugin "{module_name}"...')
     elif verbosity == 'brief':
-        print(f'Setting up PyTorch plugin "{module_name}"... ', end='', flush=True)
+        print(f'Setting up PyTorch plugin "{module_name}"... ')#, end='', flush=True)
+        
     verbose_build = (verbosity == 'full')
 
+    print("Trying to compile...")
+    
     # Compile and load.
     try: # pylint: disable=too-many-nested-blocks
         # Make sure we can find the necessary compiler binaries.
@@ -136,6 +141,8 @@ def get_plugin(module_name, sources, headers=None, source_dir=None, **build_kwar
             torch.utils.cpp_extension.load(name=module_name, build_directory=cached_build_dir,
                 verbose=verbose_build, sources=cached_sources, **build_kwargs)
         else:
+            print("Load cpp extension")
+            
             torch.utils.cpp_extension.load(name=module_name, verbose=verbose_build, sources=sources, **build_kwargs)
 
         # Load.
