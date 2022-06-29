@@ -1,0 +1,255 @@
+[+] Resuming training on file /scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00012-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl.
+singularity exec --nv /scratch/jfernand/container_pytorch.sif python3 /home/jfernand/stylegan3/ulysses_scripts/../train.py --gpus=2 --data=/scratch/jfernand/blasphemous/datasets/extended_data_512.zip --outdir=/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t --resume=/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00012-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl --cfg=stylegan3-t --mirror=1 --aug=ada --metrics=fid50k --snap=11 --batch=16 --gamma=8.2
+
+Training options:
+{
+  "G_kwargs": {
+    "class_name": "training.networks_stylegan3.Generator",
+    "z_dim": 512,
+    "w_dim": 512,
+    "mapping_kwargs": {
+      "num_layers": 2
+    },
+    "channel_base": 32768,
+    "channel_max": 512,
+    "magnitude_ema_beta": 0.9994456359721023
+  },
+  "D_kwargs": {
+    "class_name": "training.networks_stylegan2.Discriminator",
+    "block_kwargs": {
+      "freeze_layers": 0
+    },
+    "mapping_kwargs": {},
+    "epilogue_kwargs": {
+      "mbstd_group_size": 4
+    },
+    "channel_base": 32768,
+    "channel_max": 512
+  },
+  "G_opt_kwargs": {
+    "class_name": "torch.optim.Adam",
+    "betas": [
+      0,
+      0.99
+    ],
+    "eps": 1e-08,
+    "lr": 0.0025
+  },
+  "D_opt_kwargs": {
+    "class_name": "torch.optim.Adam",
+    "betas": [
+      0,
+      0.99
+    ],
+    "eps": 1e-08,
+    "lr": 0.002
+  },
+  "loss_kwargs": {
+    "class_name": "training.loss.StyleGAN2Loss",
+    "r1_gamma": 8.2,
+    "blur_init_sigma": 0
+  },
+  "data_loader_kwargs": {
+    "pin_memory": true,
+    "prefetch_factor": 2,
+    "num_workers": 3
+  },
+  "training_set_kwargs": {
+    "class_name": "training.dataset.ImageFolderDataset",
+    "path": "/scratch/jfernand/blasphemous/datasets/extended_data_512.zip",
+    "use_labels": false,
+    "max_size": 97718,
+    "xflip": true,
+    "resolution": 512,
+    "random_seed": 0
+  },
+  "num_gpus": 2,
+  "batch_size": 16,
+  "batch_gpu": 8,
+  "metrics": [
+    "fid50k"
+  ],
+  "total_kimg": 25000,
+  "kimg_per_tick": 4,
+  "image_snapshot_ticks": 11,
+  "network_snapshot_ticks": 11,
+  "random_seed": 0,
+  "ema_kimg": 5.0,
+  "augment_kwargs": {
+    "class_name": "training.augment.AugmentPipe",
+    "xflip": 1,
+    "rotate90": 1,
+    "xint": 1,
+    "scale": 1,
+    "rotate": 1,
+    "aniso": 1,
+    "xfrac": 1,
+    "brightness": 1,
+    "contrast": 1,
+    "lumaflip": 1,
+    "hue": 1,
+    "saturation": 1
+  },
+  "ada_target": 0.6,
+  "resume_pkl": "/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00012-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl",
+  "ada_kimg": 100,
+  "ema_rampup": null,
+  "run_dir": "/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00013-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2"
+}
+
+Output directory:    /scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00013-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2
+Number of GPUs:      2
+Batch size:          16 images
+Training duration:   25000 kimg
+Dataset path:        /scratch/jfernand/blasphemous/datasets/extended_data_512.zip
+Dataset size:        97718 images
+Dataset resolution:  512
+Dataset labels:      False
+Dataset x-flips:     True
+
+Creating output directory...
+Launching processes...
+Loading training set...
+
+Num images:  195436
+Image shape: [3, 512, 512]
+Label shape: [0]
+
+Constructing networks...
+Resuming from "/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00012-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl"
+Setting up PyTorch plugin "bias_act_plugin"... Done.
+Setting up PyTorch plugin "filtered_lrelu_plugin"... Done.
+
+Generator                     Parameters  Buffers  Output shape        Datatype
+---                           ---         ---      ---                 ---     
+mapping.fc0                   262656      -        [8, 512]            float32 
+mapping.fc1                   262656      -        [8, 512]            float32 
+mapping                       -           512      [8, 16, 512]        float32 
+synthesis.input.affine        2052        -        [8, 4]              float32 
+synthesis.input               262144      1545     [8, 512, 36, 36]    float32 
+synthesis.L0_36_512.affine    262656      -        [8, 512]            float32 
+synthesis.L0_36_512           2359808     25       [8, 512, 36, 36]    float32 
+synthesis.L1_36_512.affine    262656      -        [8, 512]            float32 
+synthesis.L1_36_512           2359808     25       [8, 512, 36, 36]    float32 
+synthesis.L2_52_512.affine    262656      -        [8, 512]            float32 
+synthesis.L2_52_512           2359808     37       [8, 512, 52, 52]    float32 
+synthesis.L3_52_512.affine    262656      -        [8, 512]            float32 
+synthesis.L3_52_512           2359808     25       [8, 512, 52, 52]    float32 
+synthesis.L4_84_512.affine    262656      -        [8, 512]            float32 
+synthesis.L4_84_512           2359808     37       [8, 512, 84, 84]    float16 
+synthesis.L5_84_512.affine    262656      -        [8, 512]            float32 
+synthesis.L5_84_512           2359808     25       [8, 512, 84, 84]    float16 
+synthesis.L6_148_512.affine   262656      -        [8, 512]            float32 
+synthesis.L6_148_512          2359808     37       [8, 512, 148, 148]  float16 
+synthesis.L7_148_483.affine   262656      -        [8, 512]            float32 
+synthesis.L7_148_483          2226147     25       [8, 483, 148, 148]  float16 
+synthesis.L8_276_323.affine   247779      -        [8, 483]            float32 
+synthesis.L8_276_323          1404404     37       [8, 323, 276, 276]  float16 
+synthesis.L9_276_215.affine   165699      -        [8, 323]            float32 
+synthesis.L9_276_215          625220      25       [8, 215, 276, 276]  float16 
+synthesis.L10_532_144.affine  110295      -        [8, 215]            float32 
+synthesis.L10_532_144         278784      37       [8, 144, 532, 532]  float16 
+synthesis.L11_532_96.affine   73872       -        [8, 144]            float32 
+synthesis.L11_532_96          124512      25       [8, 96, 532, 532]   float16 
+synthesis.L12_532_64.affine   49248       -        [8, 96]             float32 
+synthesis.L12_532_64          55360       25       [8, 64, 532, 532]   float16 
+synthesis.L13_512_64.affine   32832       -        [8, 64]             float32 
+synthesis.L13_512_64          36928       25       [8, 64, 512, 512]   float16 
+synthesis.L14_512_3.affine    32832       -        [8, 64]             float32 
+synthesis.L14_512_3           195         1        [8, 3, 512, 512]    float16 
+synthesis                     -           -        [8, 3, 512, 512]    float32 
+---                           ---         ---      ---                 ---     
+Total                         24873519    2468     -                   -       
+
+Setting up PyTorch plugin "upfirdn2d_plugin"... Done.
+
+Discriminator  Parameters  Buffers  Output shape        Datatype
+---            ---         ---      ---                 ---     
+b512.fromrgb   256         16       [8, 64, 512, 512]   float16 
+b512.skip      8192        16       [8, 128, 256, 256]  float16 
+b512.conv0     36928       16       [8, 64, 512, 512]   float16 
+b512.conv1     73856       16       [8, 128, 256, 256]  float16 
+b512           -           16       [8, 128, 256, 256]  float16 
+b256.skip      32768       16       [8, 256, 128, 128]  float16 
+b256.conv0     147584      16       [8, 128, 256, 256]  float16 
+b256.conv1     295168      16       [8, 256, 128, 128]  float16 
+b256           -           16       [8, 256, 128, 128]  float16 
+b128.skip      131072      16       [8, 512, 64, 64]    float16 
+b128.conv0     590080      16       [8, 256, 128, 128]  float16 
+b128.conv1     1180160     16       [8, 512, 64, 64]    float16 
+b128           -           16       [8, 512, 64, 64]    float16 
+b64.skip       262144      16       [8, 512, 32, 32]    float16 
+b64.conv0      2359808     16       [8, 512, 64, 64]    float16 
+b64.conv1      2359808     16       [8, 512, 32, 32]    float16 
+b64            -           16       [8, 512, 32, 32]    float16 
+b32.skip       262144      16       [8, 512, 16, 16]    float32 
+b32.conv0      2359808     16       [8, 512, 32, 32]    float32 
+b32.conv1      2359808     16       [8, 512, 16, 16]    float32 
+b32            -           16       [8, 512, 16, 16]    float32 
+b16.skip       262144      16       [8, 512, 8, 8]      float32 
+b16.conv0      2359808     16       [8, 512, 16, 16]    float32 
+b16.conv1      2359808     16       [8, 512, 8, 8]      float32 
+b16            -           16       [8, 512, 8, 8]      float32 
+b8.skip        262144      16       [8, 512, 4, 4]      float32 
+b8.conv0       2359808     16       [8, 512, 8, 8]      float32 
+b8.conv1       2359808     16       [8, 512, 4, 4]      float32 
+b8             -           16       [8, 512, 4, 4]      float32 
+b4.mbstd       -           -        [8, 513, 4, 4]      float32 
+b4.conv        2364416     16       [8, 512, 4, 4]      float32 
+b4.fc          4194816     -        [8, 512]            float32 
+b4.out         513         -        [8, 1]              float32 
+---            ---         ---      ---                 ---     
+Total          28982849    480      -                   -       
+
+Setting up augmentation...
+Distributing across 2 GPUs...
+Setting up training phases...
+Exporting sample images...
+Initializing logs...
+Training for 25000 kimg...
+
+tick 0     kimg 0.0      time 1m 57s       sec/tick 62.3    sec/kimg 3891.44 maintenance 54.3   cpumem 3.77   gpumem 11.25  reserved 13.48  augment 0.000
+Evaluating metrics...
+Traceback (most recent call last):
+  File "/home/jfernand/stylegan3/ulysses_scripts/../train.py", line 286, in <module>
+    main() # pylint: disable=no-value-for-parameter
+  File "/opt/conda/lib/python3.8/site-packages/click/core.py", line 829, in __call__
+    return self.main(*args, **kwargs)
+  File "/opt/conda/lib/python3.8/site-packages/click/core.py", line 782, in main
+    rv = self.invoke(ctx)
+  File "/opt/conda/lib/python3.8/site-packages/click/core.py", line 1066, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/opt/conda/lib/python3.8/site-packages/click/core.py", line 610, in invoke
+    return callback(*args, **kwargs)
+  File "/home/jfernand/stylegan3/ulysses_scripts/../train.py", line 281, in main
+    launch_training(c=c, desc=desc, outdir=opts.outdir, dry_run=opts.dry_run)
+  File "/home/jfernand/stylegan3/ulysses_scripts/../train.py", line 98, in launch_training
+    torch.multiprocessing.spawn(fn=subprocess_fn, args=(c, temp_dir), nprocs=c.num_gpus)
+  File "/opt/conda/lib/python3.8/site-packages/torch/multiprocessing/spawn.py", line 230, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method='spawn')
+  File "/opt/conda/lib/python3.8/site-packages/torch/multiprocessing/spawn.py", line 188, in start_processes
+    while not context.join():
+  File "/opt/conda/lib/python3.8/site-packages/torch/multiprocessing/spawn.py", line 150, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException: 
+
+-- Process 0 terminated with the following error:
+Traceback (most recent call last):
+  File "/opt/conda/lib/python3.8/site-packages/torch/multiprocessing/spawn.py", line 59, in _wrap
+    fn(i, *args)
+  File "/home/jfernand/stylegan3/train.py", line 47, in subprocess_fn
+    training_loop.training_loop(rank=rank, **c)
+  File "/home/jfernand/stylegan3/training/training_loop.py", line 380, in training_loop
+    result_dict = metric_main.calc_metric(metric=metric, G=snapshot_data['G_ema'],
+  File "/home/jfernand/stylegan3/metrics/metric_main.py", line 48, in calc_metric
+    results = _metric_dict[metric](opts)
+  File "/home/jfernand/stylegan3/metrics/metric_main.py", line 132, in fid50k
+    fid = frechet_inception_distance.compute_fid(opts, max_real=50000, num_gen=50000)
+  File "/home/jfernand/stylegan3/metrics/frechet_inception_distance.py", line 26, in compute_fid
+    mu_real, sigma_real = metric_utils.compute_feature_stats_for_dataset(
+  File "/home/jfernand/stylegan3/metrics/metric_utils.py", line 227, in compute_feature_stats_for_dataset
+    detector = get_feature_detector(url=detector_url, device=opts.device, num_gpus=opts.num_gpus, rank=opts.rank, verbose=progress.verbose)
+  File "/home/jfernand/stylegan3/metrics/metric_utils.py", line 50, in get_feature_detector
+    _feature_detector_cache[key] = pickle.load(f).to(device)
+ModuleNotFoundError: No module named 'dnnlib.tflib'
+

@@ -1,0 +1,3 @@
+[+] Resuming training on file /scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00011-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl.
+singularity exec --nv /scratch/jfernand/container_pytorch.sif python3 /home/jfernand/stylegan3/ulysses_scripts/../train.py --gpus=2 --data=/scratch/jfernand/blasphemous/datasets/extended_data_512.zip --outdir=/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t --resume=/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00011-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl --cfg=stylegan3-t --mirror=1 --aug=ada --metrics=fid50k --snap=11 --batch=16 --gamma=8.2
+slurmstepd: error: *** JOB 3357488 ON cn11-04 CANCELLED AT 2022-05-25T12:10:39 ***

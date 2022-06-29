@@ -1,0 +1,13 @@
+[+] Resuming training on file /scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00015-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl.
+singularity exec --nv /scratch/jfernand/container_pytorch.sif python3 /home/jfernand/stylegan3/ulysses_scripts/../train.py --gpus=2 --data=/scratch/jfernand/blasphemous/datasets/extended_data_512.zip --outdir=/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t --resume=/scratch/jfernand/blasphemous/results/st3_1_stylegan3-t/00015-stylegan3-t-extended_data_512-gpus2-batch16-gamma8.2/network-snapshot-000000.pkl --cfg=stylegan3-t --mirror=1 --aug=ada --metrics=fid50k --snap=11 --batch=16 --gamma=8.2
+Traceback (most recent call last):
+  File "/home/jfernand/stylegan3/ulysses_scripts/../train.py", line 20, in <module>
+    from training import training_loop
+  File "/home/jfernand/stylegan3/training/training_loop.py", line 27, in <module>
+    from metrics import metric_main
+  File "/home/jfernand/stylegan3/metrics/metric_main.py", line 18, in <module>
+    from . import frechet_inception_distance
+  File "/home/jfernand/stylegan3/metrics/frechet_inception_distance.py", line 21
+    Direct TorchScript translation of http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz
+           ^
+SyntaxError: invalid syntax

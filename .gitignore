@@ -1,0 +1,12 @@
+__pycache__/
+blasphemous_data_uniformed_RGB/
+blasphemous_data_uniformed/
+dataset/
+datasets/
+my_container_latest.sif
+ulysses_scripts/training_checks
+ulysses_scripts/projection/input_images
+ulysses_scripts/projection/output_images
+ulysses_scripts/meta.tmp
+ulysses_scripts/resources
+slurm*.out
