@@ -120,12 +120,16 @@ def training_loop(
     cudnn_benchmark         = True,     # Enable torch.backends.cudnn.benchmark?
     abort_fn                = None,     # Callback function for determining whether to abort training. Must return consistent results across ranks.
     progress_fn             = None,     # Callback function for updating training progress. Called for all ranks.
+    local_rank = 0,
+    global_rank = 0,
+    local_gpus = 1,
+    global_gpus = 1,
 ):
     # Initialize.
     start_time = time.time()
-    device = torch.device('cuda', rank)
-    np.random.seed(random_seed * num_gpus + rank)
-    torch.manual_seed(random_seed * num_gpus + rank)
+    device = torch.device('cuda', local_rank)
+    np.random.seed(random_seed * global_gpus + global_rank)
+    torch.manual_seed(random_seed * global_gpus + global_rank)
     torch.backends.cudnn.benchmark = cudnn_benchmark    # Improves training speed.
     torch.backends.cuda.matmul.allow_tf32 = False       # Improves numerical accuracy.
     torch.backends.cudnn.allow_tf32 = False             # Improves numerical accuracy.
@@ -133,12 +137,12 @@ def training_loop(
     grid_sample_gradfix.enabled = True                  # Avoids errors with the augmentation pipe.
 
     # Load training set.
-    if rank == 0:
+    if global_rank == 0:
         print('Loading training set...')
     training_set = dnnlib.util.construct_class_by_name(**training_set_kwargs) # subclass of training.dataset.Dataset
-    training_set_sampler = misc.InfiniteSampler(dataset=training_set, rank=rank, num_replicas=num_gpus, seed=random_seed)
-    training_set_iterator = iter(torch.utils.data.DataLoader(dataset=training_set, sampler=training_set_sampler, batch_size=batch_size//num_gpus, **data_loader_kwargs))
-    if rank == 0:
+    training_set_sampler = misc.InfiniteSampler(dataset=training_set, rank=global_rank, num_replicas=global_gpus, seed=random_seed)
+    training_set_iterator = iter(torch.utils.data.DataLoader(dataset=training_set, sampler=training_set_sampler, batch_size=batch_size//global_gpus, **data_loader_kwargs))
+    if global_rank == 0:
         print()
         print('Num images: ', len(training_set))
         print('Image shape:', training_set.image_shape)
@@ -146,7 +150,7 @@ def training_loop(
         print()
 
     # Construct networks.
-    if rank == 0:
+    if global_rank == 0:
         print('Constructing networks...')
     common_kwargs = dict(c_dim=training_set.label_dim, img_resolution=training_set.resolution, img_channels=training_set.num_channels)
     G = dnnlib.util.construct_class_by_name(**G_kwargs, **common_kwargs).train().requires_grad_(False).to(device) # subclass of torch.nn.Module
@@ -154,7 +158,7 @@ def training_loop(
     G_ema = copy.deepcopy(G).eval()
 
     # Resume from existing pickle.
-    if (resume_pkl is not None) and (rank == 0):
+    if (resume_pkl is not None) and (global_rank == 0):
         print(f'Resuming from "{resume_pkl}"')
         with dnnlib.util.open_url(resume_pkl) as f:
             resume_data = legacy.load_network_pkl(f)
@@ -162,14 +166,14 @@ def training_loop(
             misc.copy_params_and_buffers(resume_data[name], module, require_all=False)
 
     # Print network summary tables.
-    if rank == 0:
+    if global_rank == 0:
         z = torch.empty([batch_gpu, G.z_dim], device=device)
         c = torch.empty([batch_gpu, G.c_dim], device=device)
         img = misc.print_module_summary(G, [z, c])
         misc.print_module_summary(D, [img, c])
 
     # Setup augmentation.
-    if rank == 0:
+    if global_rank == 0:
         print('Setting up augmentation...')
     augment_pipe = None
     ada_stats = None
@@ -180,15 +184,15 @@ def training_loop(
             ada_stats = training_stats.Collector(regex='Loss/signs/real')
 
     # Distribute across GPUs.
-    if rank == 0:
-        print(f'Distributing across {num_gpus} GPUs...')
+    if global_rank == 0:
+        print(f'Distributing across {global_gpus} GPUs...')
     for module in [G, D, G_ema, augment_pipe]:
-        if module is not None and num_gpus > 1:
+        if module is not None and global_gpus > 1:
             for param in misc.params_and_buffers(module):
                 torch.distributed.broadcast(param, src=0)
 
     # Setup training phases.
-    if rank == 0:
+    if global_rank == 0:
         print('Setting up training phases...')
     loss = dnnlib.util.construct_class_by_name(device=device, G=G, D=D, augment_pipe=augment_pipe, **loss_kwargs) # subclass of training.loss.Loss
     phases = []
@@ -207,7 +211,7 @@ def training_loop(
     for phase in phases:
         phase.start_event = None
         phase.end_event = None
-        if rank == 0:
+        if global_rank == 0:
             phase.start_event = torch.cuda.Event(enable_timing=True)
             phase.end_event = torch.cuda.Event(enable_timing=True)
 
@@ -215,7 +219,7 @@ def training_loop(
     grid_size = None
     grid_z = None
     grid_c = None
-    if rank == 0:
+    if global_rank == 0:
         print('Exporting sample images...')
         grid_size, images, labels = setup_snapshot_image_grid(training_set=training_set)
         save_image_grid(images, os.path.join(run_dir, 'reals.png'), drange=[0,255], grid_size=grid_size)
@@ -225,13 +229,13 @@ def training_loop(
         save_image_grid(images, os.path.join(run_dir, 'fakes_init.png'), drange=[-1,1], grid_size=grid_size)
 
     # Initialize logs.
-    if rank == 0:
+    if global_rank == 0:
         print('Initializing logs...')
     stats_collector = training_stats.Collector(regex='.*')
     stats_metrics = dict()
     stats_jsonl = None
     stats_tfevents = None
-    if rank == 0:
+    if global_rank == 0:
         stats_jsonl = open(os.path.join(run_dir, 'stats.jsonl'), 'wt')
         try:
             import torch.utils.tensorboard as tensorboard
@@ -240,7 +244,7 @@ def training_loop(
             print('Skipping tfevents export:', err)
 
     # Train.
-    if rank == 0:
+    if global_rank == 0:
         print(f'Training for {total_kimg} kimg...')
         print()
     cur_nimg = resume_kimg * 1000
@@ -283,9 +287,9 @@ def training_loop(
                 params = [param for param in phase.module.parameters() if param.grad is not None]
                 if len(params) > 0:
                     flat = torch.cat([param.grad.flatten() for param in params])
-                    if num_gpus > 1:
+                    if global_gpus > 1:
                         torch.distributed.all_reduce(flat)
-                        flat /= num_gpus
+                        flat /= global_gpus
                     misc.nan_to_num(flat, nan=0, posinf=1e5, neginf=-1e5, out=flat)
                     grads = flat.split([param.numel() for param in params])
                     for param, grad in zip(params, grads):
@@ -338,18 +342,18 @@ def training_loop(
         fields += [f"augment {training_stats.report0('Progress/augment', float(augment_pipe.p.cpu()) if augment_pipe is not None else 0):.3f}"]
         training_stats.report0('Timing/total_hours', (tick_end_time - start_time) / (60 * 60))
         training_stats.report0('Timing/total_days', (tick_end_time - start_time) / (24 * 60 * 60))
-        if rank == 0:
+        if global_rank == 0:
             print(' '.join(fields))
 
         # Check for abort.
         if (not done) and (abort_fn is not None) and abort_fn():
             done = True
-            if rank == 0:
+            if global_rank == 0:
                 print()
                 print('Aborting...')
 
         # Save image snapshot.
-        if (rank == 0) and (image_snapshot_ticks is not None) and (done or cur_tick % image_snapshot_ticks == 0):
+        if (global_rank == 0) and (image_snapshot_ticks is not None) and (done or cur_tick % image_snapshot_ticks == 0):
             images = torch.cat([G_ema(z=z, c=c, noise_mode='const').cpu() for z, c in zip(grid_z, grid_c)]).numpy()
             save_image_grid(images, os.path.join(run_dir, f'fakes{cur_nimg//1000:06d}.png'), drange=[-1,1], grid_size=grid_size)
 
@@ -361,25 +365,25 @@ def training_loop(
             for key, value in snapshot_data.items():
                 if isinstance(value, torch.nn.Module):
                     value = copy.deepcopy(value).eval().requires_grad_(False)
-                    if num_gpus > 1:
+                    if global_gpus > 1:
                         misc.check_ddp_consistency(value, ignore_regex=r'.*\.[^.]+_(avg|ema)')
                         for param in misc.params_and_buffers(value):
                             torch.distributed.broadcast(param, src=0)
                     snapshot_data[key] = value.cpu()
                 del value # conserve memory
             snapshot_pkl = os.path.join(run_dir, f'network-snapshot-{cur_nimg//1000:06d}.pkl')
-            if rank == 0:
+            if global_rank == 0:
                 with open(snapshot_pkl, 'wb') as f:
                     pickle.dump(snapshot_data, f)
 
         # Evaluate metrics.
         if (snapshot_data is not None) and (len(metrics) > 0):
-            if rank == 0:
+            if global_rank == 0:
                 print('Evaluating metrics...')
             for metric in metrics:
                 result_dict = metric_main.calc_metric(metric=metric, G=snapshot_data['G_ema'],
-                    dataset_kwargs=training_set_kwargs, num_gpus=num_gpus, rank=rank, device=device)
-                if rank == 0:
+                    dataset_kwargs=training_set_kwargs, num_gpus=global_gpus, rank=global_rank, device=device)
+                if global_rank == 0:
                     metric_main.report_metric(result_dict, run_dir=run_dir, snapshot_pkl=snapshot_pkl)
                 stats_metrics.update(result_dict.results)
         del snapshot_data # conserve memory
@@ -420,7 +424,7 @@ def training_loop(
             break
 
     # Done.
-    if rank == 0:
+    if global_rank == 0:
         print()
         print('Exiting...')
 

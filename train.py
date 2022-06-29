@@ -15,6 +15,7 @@ import re
 import json
 import tempfile
 import torch
+import time
 
 import dnnlib
 from training import training_loop
@@ -27,24 +28,34 @@ from torch_utils import custom_ops
 def subprocess_fn(rank, c, temp_dir):
     dnnlib.util.Logger(file_name=os.path.join(c.run_dir, 'log.txt'), file_mode='a', should_flush=True)
 
+    num_nodes = 2
+    local_rank = rank
+    global_rank = int(local_rank + int(os.environ['SLURM_PROCID']) * (c.num_gpus//num_nodes))
+    local_gpus = c.num_gpus//num_nodes
+    global_gpus = int(os.environ['WORLD_SIZE'])
+
     # Init torch.distributed.
     if c.num_gpus > 1:
         init_file = os.path.abspath(os.path.join(temp_dir, '.torch_distributed_init'))
+
         if os.name == 'nt':
             init_method = 'file:///' + init_file.replace('\\', '/')
             torch.distributed.init_process_group(backend='gloo', init_method=init_method, rank=rank, world_size=c.num_gpus)
         else:
-            init_method = f'file://{init_file}'
-            torch.distributed.init_process_group(backend='nccl', init_method=init_method, rank=rank, world_size=c.num_gpus)
+            print(global_rank)
+            init_method = 'env://'
+            #init_method = f'file://{init_file}'
+            torch.distributed.init_process_group(backend='nccl', rank=global_rank, init_method=init_method, world_size=global_gpus)
+            
 
     # Init torch_utils.
-    sync_device = torch.device('cuda', rank) if c.num_gpus > 1 else None
-    training_stats.init_multiprocessing(rank=rank, sync_device=sync_device)
-    if rank != 0:
+    sync_device = torch.device('cuda', local_rank) if c.num_gpus > 1 else None
+    training_stats.init_multiprocessing(rank=global_rank, sync_device=sync_device)
+    if local_rank != 0:
         custom_ops.verbosity = 'none'
 
     # Execute training loop.
-    training_loop.training_loop(rank=rank, **c)
+    training_loop.training_loop(rank=rank, local_rank=local_rank, global_rank=global_rank, local_gpus=local_gpus, global_gpus=global_gpus, **c)
 
 #----------------------------------------------------------------------------
 
@@ -57,9 +68,9 @@ def launch_training(c, desc, outdir, dry_run):
         prev_run_dirs = [x for x in os.listdir(outdir) if os.path.isdir(os.path.join(outdir, x))]
     prev_run_ids = [re.match(r'^\d+', x) for x in prev_run_dirs]
     prev_run_ids = [int(x.group()) for x in prev_run_ids if x is not None]
-    cur_run_id = max(prev_run_ids, default=-1) + 1
-    c.run_dir = os.path.join(outdir, f'{cur_run_id:05d}-{desc}')
-    assert not os.path.exists(c.run_dir)
+    cur_run_id = int(os.environ['SLURM_JOB_ID'])
+    c.run_dir = os.path.join(outdir, f'{cur_run_id}-{desc}')
+    #assert not os.path.exists(c.run_dir)
 
     # Print options.
     print()
@@ -84,18 +95,31 @@ def launch_training(c, desc, outdir, dry_run):
 
     # Create output directory.
     print('Creating output directory...')
-    os.makedirs(c.run_dir)
+
+    try:
+        os.makedirs(c.run_dir)
+    except FileExistsError as e:
+        pass
+    
     with open(os.path.join(c.run_dir, 'training_options.json'), 'wt') as f:
         json.dump(c, f, indent=2)
 
     # Launch processes.
     print('Launching processes...')
     torch.multiprocessing.set_start_method('spawn')
-    with tempfile.TemporaryDirectory() as temp_dir:
-        if c.num_gpus == 1:
-            subprocess_fn(rank=0, c=c, temp_dir=temp_dir)
-        else:
-            torch.multiprocessing.spawn(fn=subprocess_fn, args=(c, temp_dir), nprocs=c.num_gpus)
+    temp_dir = f"{os.environ['SCRATCH']}"
+
+    #try:
+    #    init_file = os.path.abspath(os.path.join(temp_dir, '.torch_distributed_init'))
+    #    os.remove(init_file)
+    #except FileNotFoundError as e:
+    #    pass
+    
+    num_nodes = 2
+    if c.num_gpus == 1:
+        subprocess_fn(rank=0, c=c, temp_dir=temp_dir)
+    else:
+        torch.multiprocessing.spawn(fn=subprocess_fn, args=(c, temp_dir), nprocs=c.num_gpus//num_nodes)
 
 #----------------------------------------------------------------------------
 
@@ -202,9 +226,9 @@ def main(**kwargs):
     c.training_set_kwargs.xflip = opts.mirror
 
     # Hyperparameters & settings.
-    c.num_gpus = opts.gpus
+    c.num_gpus = int(os.environ['WORLD_SIZE'])
     c.batch_size = opts.batch
-    c.batch_gpu = opts.batch_gpu or opts.batch // opts.gpus
+    c.batch_gpu = opts.batch_gpu or opts.batch // int(os.environ['WORLD_SIZE'])
     c.G_kwargs.channel_base = c.D_kwargs.channel_base = opts.cbase
     c.G_kwargs.channel_max = c.D_kwargs.channel_max = opts.cmax
     c.G_kwargs.mapping_kwargs.num_layers = (8 if opts.cfg == 'stylegan2' else 2) if opts.map_depth is None else opts.map_depth
@@ -276,7 +300,7 @@ def main(**kwargs):
     desc = f'{opts.cfg:s}-{dataset_name:s}-gpus{c.num_gpus:d}-batch{c.batch_size:d}-gamma{c.loss_kwargs.r1_gamma:g}'
     if opts.desc is not None:
         desc += f'-{opts.desc}'
-
+    
     # Launch.
     launch_training(c=c, desc=desc, outdir=opts.outdir, dry_run=opts.dry_run)
 
