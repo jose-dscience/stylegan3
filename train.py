@@ -45,7 +45,10 @@ def subprocess_fn(rank, c, temp_dir):
             print(global_rank)
             init_method = 'env://'
             #init_method = f'file://{init_file}'
+            print("hola2") ############################################################################################
+            print(global_gpus) ########################################################################################
             torch.distributed.init_process_group(backend='nccl', rank=global_rank, init_method=init_method, world_size=global_gpus)
+        print("adios") ############################################################################################     
             
 
     # Init torch_utils.
@@ -107,8 +110,8 @@ def launch_training(c, desc, outdir, dry_run):
     # Launch processes.
     print('Launching processes...')
     torch.multiprocessing.set_start_method('spawn')
-    #temp_dir = f"{os.environ['SCRATCH']}" 
-    temp_dir = tempfile.TemporaryDirectory() ####################################
+    temp_dir = f"{os.environ['SCRATCH']}" 
+    #temp_dir = str(tempfile.TemporaryDirectory()) ####################################
 
     #try:
     #    init_file = os.path.abspath(os.path.join(temp_dir, '.torch_distributed_init'))
@@ -120,10 +123,7 @@ def launch_training(c, desc, outdir, dry_run):
     if c.num_gpus == 1:
         subprocess_fn(rank=0, c=c, temp_dir=temp_dir)
     else:
-        print('hola ' + str(c.num_gpus) + " " + str(num_nodes)) #############################################################################################
         torch.multiprocessing.spawn(fn=subprocess_fn, args=(c, temp_dir), nprocs=c.num_gpus//num_nodes)
-        
-    print('adios') #############################################################################################
 
 #----------------------------------------------------------------------------
 
