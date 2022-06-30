@@ -107,7 +107,8 @@ def launch_training(c, desc, outdir, dry_run):
     # Launch processes.
     print('Launching processes...')
     torch.multiprocessing.set_start_method('spawn')
-    temp_dir = f"{os.environ['SCRATCH']}"
+    #temp_dir = f"{os.environ['SCRATCH']}" 
+    temp_dir = tempfile.TemporaryDirectory() ####################################
 
     #try:
     #    init_file = os.path.abspath(os.path.join(temp_dir, '.torch_distributed_init'))
@@ -119,7 +120,10 @@ def launch_training(c, desc, outdir, dry_run):
     if c.num_gpus == 1:
         subprocess_fn(rank=0, c=c, temp_dir=temp_dir)
     else:
+        print('hola ' + str(c.num_gpus) + " " + str(num_nodes)) #############################################################################################
         torch.multiprocessing.spawn(fn=subprocess_fn, args=(c, temp_dir), nprocs=c.num_gpus//num_nodes)
+        
+    print('adios') #############################################################################################
 
 #----------------------------------------------------------------------------
 
